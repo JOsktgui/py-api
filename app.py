@@ -3,17 +3,9 @@ from BookModel import *
 from settings import *
 import json
 
-books = [
-  {
-    'name': 'Green Eggs and Ham',
-    'price': 5.99,
-    'isbn': 213828182819102
-  }, {
-    'name': 'The Cat In The Hat',
-    'price': 1.99,
-    'isbn': 112131222122
-  }
-]
+import jwt, datetime
+
+app.config['SECRET_KEY'] = 'meow'
 
 def validBookObject(bookObject):
   if ('name' in bookObject and 'price' in bookObject and 'isbn' in bookObject):
@@ -23,8 +15,20 @@ def validBookObject(bookObject):
 
 ############# ROUTES #############
 # GET
+@app.route('/login')
+def get_token():
+  token = jwt.encode({
+    'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=100)
+  }, app.config['SECRET_KEY'], algorithm='HS256')
+  return token
+
 @app.route('/books')
-def get_books():
+def get_books():  
+  token = request.args.get('token')
+  try:
+    jwt.decode(token, app.config['SECRET_KEY'])
+  except:
+    return jsonify({ 'error': 'Need a valid token to view this page' }), 401
   return jsonify({ 'books': Book.get_all_books() })
 
 @app.route('/books/<int:isbn>')
@@ -76,10 +80,9 @@ def update_book(isbn):
 # DELETE
 @app.route('/books/<int:isbn>', methods=['DELETE'])
 def delete_book(isbn):
-  if (Book.delete_book(isbn)) {
+  if (Book.delete_book(isbn)):
     response = Response('', status=204)
     return response
-  }
   
   invalidBookObjectErrorMsg = {
     'msg': 'Book with the ISBN number that was provided was not found!'
